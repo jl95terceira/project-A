@@ -14,6 +14,7 @@ def run(dump_dir    :str,
         page_n_step :int):
 
     print("Begin cart scraping run on Lexaloffle BBS")
+    n = 0
     no_posts_count = 0
     for page_n in itertools.count(page_n_start, step=page_n_step):
 
@@ -43,7 +44,7 @@ def run(dump_dir    :str,
 
         if len(post_ids) != _POSTS_N_EXPECTED:
 
-            print(f"  Number of posts different than expected on page #{page_n} - {len(post_ids)} instead of {_POSTS_N_EXPECTED}")
+            print(f"  Number of posts different than usual on page #{page_n} - {len(post_ids)} instead of {_POSTS_N_EXPECTED}")
 
         for post_id in post_ids:
 
@@ -55,7 +56,7 @@ def run(dump_dir    :str,
 
             except Exception as exc:
 
-                print(f"    Error on request for post #{post_id}: {exc}\n    Moving on...")
+                print(f"    Error on request for post #{post_id} at {post_url}: {exc}\n    Moving on...")
                 continue
             
             cart_el  = bs4.BeautifulSoup(post, "html.parser").find("a", {"title": "Open Cartridge File"})
@@ -101,21 +102,24 @@ def run(dump_dir    :str,
                 continue
             
             print(f"      Saved cart at {repr(cart_url)} to {repr(cart_fn)}")
+            n = n + 1
                         
-    print("End")
+    print(f"End\nNumber of carts saved during this run: {n}")
+    return n
 
 def run_multi(dump_dir   :str,
               page_start :int=1,
               threads_n  :int=20,
               step_factor:int=1):
     
+    n = 0
     for i in range(threads_n):
 
         threading.Thread(target=lambda: run(
             dump_dir, 
             page_n_start=i+page_start, 
             page_n_step =step_factor*threads_n
-            )).start()
+        )).start()
 
 if __name__ == "__main__":
 
