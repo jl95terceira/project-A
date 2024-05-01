@@ -24,22 +24,3 @@ The script can be run straight away without arguments but there are options to c
 ```
 pico8bb.py -h
 ```
-
-Help text:
-
-```
-usage: pico8bb.py [-h] [--dir DIR] [--p P] [--th TH] [--step STEP]
-
-Download PICO-8 game carts from the official billboard, hosted at: https://www.lexaloffle.com/bbs/
-
-options:
-  -h, --help   show this help message and exit
-  --dir DIR    directory to which to download the carts
-               Defaults to C:\Users\ec01046a\Downloads\PICO-8 Carts.
-  --p P        billboard page at which to start scraping
-               Defaults to 1 (the 1st page).
-  --th TH      nr of threads to start
-               Defaults to 8.
-  --step STEP  how many pages to jump between each request
-               May be useful in very specific cases but, usually, best left as default (1 = no over-stepping).
-```
