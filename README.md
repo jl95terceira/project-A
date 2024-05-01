@@ -3,7 +3,7 @@ Pico 8 BBS cart webscraper - for those who like retro-style fantasy-console gami
 # Get started
 Install:
 <ul>
-  <li>Python ≥ 3.12 - any more recent version with <code>typing</code></li>
+  <li>Python ≥ 3.12
   <li>Python package <code>beautifulsoup4</code>, installed via <code>pip install beautifulsoup4</code></li>
 </ul>
 
