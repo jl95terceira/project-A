@@ -1,12 +1,14 @@
-import bs4
+# standard
 import itertools
 import os
 import os.path
 import re
 import threading
-from   urllib.request import urlopen as urlopen
+from   urllib.request import urlopen
+# third-party
+import bs4
 
-_ROOT             = "https://www.lexaloffle.com"
+_WEBSITE          = "https://www.lexaloffle.com"
 _POSTS_N_EXPECTED = 30
 
 def run(dump_dir    :str, 
@@ -14,11 +16,11 @@ def run(dump_dir    :str,
         page_n_step :int):
 
     print("Begin cart scraping run on Lexaloffle BBS")
-    n = 0
-    no_posts_count = 0
+    carts_saved_n = 0
+    no_posts_n    = 0
     for page_n in itertools.count(page_n_start, step=page_n_step):
 
-        page_url = f"{_ROOT}/bbs/?sub=0&page={page_n}&mode=carts&cat=7"
+        page_url = f"{_WEBSITE}/bbs/?sub=0&page={page_n}&mode=carts&cat=7"
         print(f"Requesting page #{page_n}: {repr(page_url)}")
         try:
         
@@ -31,13 +33,13 @@ def run(dump_dir    :str,
         post_ids:list[str] = list(re.findall("\\?tid=([0-9]+)", page))
         if not post_ids:
 
-            no_posts_count += 1
+            no_posts_n += 1
 
         else:
 
-            no_posts_count = 0
+            no_posts_n = 0
 
-        if no_posts_count >= 5:
+        if no_posts_n >= 5:
 
             print("  No posts found for a few pages consecutively\n  Probably, no more posts to be had")
             break
@@ -48,7 +50,7 @@ def run(dump_dir    :str,
 
         for post_id in post_ids:
 
-            post_url = f"{_ROOT}/bbs/?tid={post_id}"
+            post_url = f"{_WEBSITE}/bbs/?tid={post_id}"
             print(f"  Requesting post #{post_id}: {repr(post_url)}")
             try:
             
@@ -59,23 +61,23 @@ def run(dump_dir    :str,
                 print(f"    Error on request for post #{post_id} at {post_url}: {exc}\n    Moving on...")
                 continue
             
-            cart_el  = bs4.BeautifulSoup(post, "html.parser").find("a", {"title": "Open Cartridge File"})
-            if cart_el is None:
+            cart_element = bs4.BeautifulSoup(post, "html.parser").find("a", {"title": "Open Cartridge File"})
+            if cart_element is None:
 
                 print(f"    Cart element not found in post #{post_id}")
 
             try:
             
-                cart_hr  = cart_el["href"]
+                cart_href  = cart_element["href"]
 
             except:
 
                 print(f"    Cart URL not found in supposed cart element in post #{post_id}")
                 continue
                 
-            cart_url = f"{_ROOT}{cart_hr}"
-            cart_fn  = os.path.join(dump_dir, cart_url.split("/")[-1])
-            if os.path.exists(cart_fn): 
+            cart_url       = f"{_WEBSITE}{cart_href}"
+            cart_file_name = os.path.join(dump_dir, cart_url.split("/")[-1])
+            if os.path.exists(cart_file_name): 
                 
                 continue
 
@@ -92,41 +94,75 @@ def run(dump_dir    :str,
                 
             try:
             
-                with open(cart_fn, "wb") as fd:
+                with open(cart_file_name, "wb") as cart_file:
 
-                    fd.write(cart)
+                    cart_file.write(cart)
 
             except Exception as exc:
 
-                print(f"      Error on saving cart to {repr(cart_fn)}: {exc} - moving on")
+                print(f"      Error on saving cart to {repr(cart_file_name)}: {exc} - moving on")
                 continue
             
-            print(f"      Saved cart at {repr(cart_url)} to {repr(cart_fn)}")
-            n = n + 1
+            print(f"      Saved cart at {repr(cart_url)} to {repr(cart_file_name)}")
+            carts_saved_n += 1
                         
-    print(f"End\nNumber of carts saved during this run: {n}")
-    return n
+    print(f"End\nNumber of carts saved during this run: {carts_saved_n}")
+    return carts_saved_n
 
 def run_multi(dump_dir   :str,
-              page_start :int=1,
-              threads_n  :int=20,
+              page_start :int,
+              threads_n  :int=1,
               step_factor:int=1):
     
     n = 0
     for i in range(threads_n):
 
-        threading.Thread(target=lambda: run(
-            dump_dir, 
-            page_n_start=i+page_start, 
-            page_n_step =step_factor*threads_n
-        )).start()
+        threading.Thread(target=lambda: run(dump_dir, 
+                                            page_n_start=i+page_start, 
+                                            page_n_step =step_factor*threads_n)).start()
 
 if __name__ == "__main__":
 
-    import sys
-    run_multi(
-        dump_dir   =    sys.argv[1], 
-        page_start =int(sys.argv[2]), 
-        threads_n  =int(sys.argv[3]),
-        step_factor=int(sys.argv[4]),
-        )
+    import argparse
+
+    class A:
+
+        DOWNLOAD_DIRECTORY = 'dir'
+        PAGE_START         = 'p'
+        THREADS_N          = 'th'
+        STEP_FACTOR        = 'step'
+
+    class DEFAULTS:
+
+        THREADS_N           = 8
+        DOWNLOADS_DIRECTORY = os.path.join(os.path.expanduser('~'), 'Downloads', 'PICO-8 Carts')
+
+    def assertInt(value:str|int):
+
+        try:    return int(value)
+        except: raise argparse.ArgumentTypeError(f'given value {repr(value)} is not integer-like')
+
+    p = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,
+                                description    ='Download PICO-8 game carts from the official billboard, hosted at: https://www.lexaloffle.com/bbs/')
+    p.add_argument(f'--{A.DOWNLOAD_DIRECTORY}',
+                   help   =f'directory to which to download the carts\nDefaults to {DEFAULTS.DOWNLOADS_DIRECTORY}.',
+                   default=DEFAULTS.DOWNLOADS_DIRECTORY)
+    p.add_argument(f'--{A.PAGE_START}',
+                   help   =f'billboard page at which to start scraping\nDefaults to 1 (the 1st page).',
+                   type   =assertInt,
+                   default=1)
+    p.add_argument(f'--{A.THREADS_N}',
+                   help   =f'nr of threads to start\nDefaults to {DEFAULTS.THREADS_N}.',
+                   type   =assertInt,
+                   default=DEFAULTS.THREADS_N)
+    p.add_argument(f'--{A.STEP_FACTOR}',
+                   help   =f'how many pages to jump between each request\nMay be useful in very specific cases but, usually, best left as default (1 = no over-stepping).',
+                   type   =assertInt,
+                   default=1)
+    # parse args
+    def get(a:str, _args=p.parse_args()): return getattr(_args,a)
+    # do it
+    run_multi(dump_dir   =get(A.DOWNLOAD_DIRECTORY), 
+              page_start =get(A.PAGE_START), 
+              threads_n  =get(A.THREADS_N),
+              step_factor=get(A.STEP_FACTOR))
