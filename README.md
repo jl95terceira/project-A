@@ -13,14 +13,20 @@ To run <code>pico8bb.py</code>, call
 python pico8bb.py ...
 ```
 
-or, if you set <code>.py</code> files to open with Python by default, simply call
+or, if you set <code>.py</code> files to open with Python by default, call
 
 ```
 pico8bb.py ...
 ```
 
+of, even better, if also you add `.PY` to environment variable PATHEXT (Windows only), call
+
+```
+pico8bb ...
+```
+
 The script can be run straight away without arguments but there are options to customize its behaviour. For help, call the script with option <code>-h</code> like so.
 
 ```
-pico8bb.py -h
+pico8bb -h
 ```
